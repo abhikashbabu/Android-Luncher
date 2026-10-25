@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Crimson Glass Launcher v0.3 — Interactive Smooth Motion & Physics Simulator</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at 20% 15%, #2b0912 0%, #121017 55%, #0c0b10 100%);
+    color: #ffffff;
+    overflow-x: hidden;
+  }
+  /* Frosted Glassmorphism Core Styles (Zero Flat Black) */
+  .glass-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 60%, rgba(255, 42, 60, 0.08) 100%);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 12px 32px rgba(10, 6, 14, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+  .glass-card-dark {
+    background: linear-gradient(145deg, rgba(38, 26, 44, 0.78) 0%, rgba(22, 19, 28, 0.86) 100%);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .glass-icon {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 42, 60, 0.10) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-icon:active {
+    transform: scale(0.91);
+  }
+  .crimson-glow-active {
+    border-color: #ff2a3c !important;
+    box-shadow: 0 0 18px rgba(255, 42, 60, 0.55), inset 0 0 10px rgba(255, 42, 60, 0.28) !important;
+  }
+  .pill-active {
+    background: linear-gradient(135deg, rgba(255, 42, 60, 0.72) 0%, rgba(158, 11, 34, 0.65) 100%);
+    border: 1px solid #ff6b78;
+    box-shadow: 0 0 16px rgba(255, 42, 60, 0.48);
+  }
+  .pill-inactive {
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+  }
+  /* Custom Scrollbars Hidden */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  @keyframes pulse-jiggle {
+    0%, 100% { transform: rotate(-1.2deg) scale(0.98); }
+    50% { transform: rotate(1.2deg) scale(1.01); }
+  }
+  .multi-jiggle {
+    animation: pulse-jiggle 0.42s infinite ease-in-out;
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row items-center justify-center p-3 sm:p-6 gap-6">
+
+  <!-- LEFT / TOP CONTROL PANEL & MOTION TELEMETRY -->
+  <div class="w-full max-w-md lg:w-80 flex flex-col gap-4 order-2 lg:order-1">
+    <div class="glass-card rounded-3xl p-5">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold tracking-widest uppercase text-rose-400">Crimson Glass v0.3</span>
+        <span id="fpsBadge" class="text-[11px] px-2.5 py-0.5 rounded-full pill-active font-semibold">120Hz Spring Physics</span>
+      </div>
+      <h1 class="text-lg font-bold text-white leading-snug">Smooth Touch-Sliding & Motion Simulator</h1>
+      <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+        Direct jump animations hata kar <strong>1:1 Continuous Finger-Tracking + Velocity Spring Physics</strong> lagaya gaya hai. Phone screen par mouse ya touch se drag karke dekhein:
+      </p>
+
+      <!-- Instant Jump/Test Triggers (Uses the exact same spring physics engine) -->
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button id="btnPage1" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-active text-white transition hover:opacity-90">
+          Home Page 1
+        </button>
+        <button id="btnPage2" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-inactive text-white transition hover:bg-white/20">
+          Page 2 (Widgets)
+        </button>
+        <button id="btnMultiSelect" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-inactive text-white transition hover:bg-white/20">
+          Multi-Select Mode
+        </button>
+        <button id="btnNavDrawer" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-inactive text-white transition hover:bg-white/20">
+          Left Nav Drawer
+        </button>
+        <button id="btnVolume" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-inactive text-white transition hover:bg-white/20">
+          Volume Overlay
+        </button>
+        <button id="btnAppDrawer" class="text-xs font-medium py-2.5 px-3 rounded-xl pill-inactive text-white transition hover:bg-white/20">
+          Search & Drawer
+        </button>
+      </div>
+
+      <!-- Real-Time Physics Telemetry -->
+      <div class="mt-4 pt-3 border-t border-white/15 text-[11px] text-slate-300 space-y-1.5">
+        <div class="flex justify-between">
+          <span>Active Gesture:</span>
+          <span id="telemetryGesture" class="font-mono text-rose-300 font-semibold">IDLE (Touch/Drag Screen)</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Home Pager Offset:</span>
+          <span id="telemetryHomeX" class="font-mono text-white">0.00 px (Page 1/3)</span>
+        </div>
+        <div class="flex justify-between">
+          <span>App Drawer Slide:</span>
+          <span id="telemetryDrawerY" class="font-mono text-white">0%</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Nav Drawer Slide:</span>
+          <span id="telemetryNavX" class="font-mono text-white">0%</span>
+        </div>
+      </div>
+
+      <button id="btnViewCode" class="w-full mt-4 py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/25 text-xs font-semibold text-white flex items-center justify-center gap-2 transition">
+        <span>📄 View Upgraded MainActivity.java Features</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- CENTER: INTERACTIVE PHONE FRAME (360 x 740) -->
+  <div class="relative order-1 lg:order-2 flex-shrink-0">
+    <div id="phoneFrame" class="relative w-[356px] h-[736px] rounded-[46px] p-[10px] bg-gradient-to-b from-zinc-700 via-zinc-900 to-black shadow-[0_25px_70px_rgba(229,9,20,0.28)] border border-white/20">
+      <!-- Inner Screen Viewport -->
+      <div id="screenViewport" class="relative w-full h-full rounded-[38px] overflow-hidden bg-[#14131A] touch-none cursor-grab active:cursor-grabbing">
+
+        <!-- 1. LIVELY CRIMSON RED & DEEP CHARCOAL PARALLAX MESH WALLPAPER (NO FLAT BLACK) -->
+        <div id="wallpaperLayer" class="absolute inset-0 pointer-events-none" style="
+          background:
+            radial-gradient(circle at 22% 18%, rgba(255, 30, 50, 0.78) 0%, rgba(158, 11, 34, 0.38) 42%, transparent 72%),
+            radial-gradient(circle at 86% 52%, rgba(229, 9, 20, 0.72) 0%, rgba(100, 8, 24, 0.35) 48%, transparent 76%),
+            radial-gradient(circle at 26% 88%, rgba(217, 11, 36, 0.56) 0%, transparent 65%),
+            linear-gradient(145deg, #280812 0%, #15131c 52%, #1d1526 100%);
+          width: 130%;
+          height: 115%;
+          left: -15%;
+          top: -7%;
+        "></div>
+
+        <!-- TOP STATUS BAR -->
+        <div class="absolute top-0 inset-x-0 h-9 px-6 flex items-center justify-between z-40 pointer-events-none text-[11px] font-medium text-white/90">
+          <span id="statusBarTime">10:24</span>
+          <div class="w-4 h-4 rounded-full bg-black/70 border border-white/15"></div>
+          <div class="flex items-center gap-1.5">
+            <span>5G</span>
+            <span>📶</span>
+            <span>🔋 85%</span>
+          </div>
+        </div>
+
+        <!-- 2. HOME STAGE (Scales & Blurs smoothly as drawers slide) -->
+        <div id="homeStage" class="absolute inset-0 origin-center will-change-transform">
+          <!-- 3-Page Horizontal Strip (width = 300%) -->
+          <div id="homeStrip" class="flex h-full w-[300%] will-change-transform">
+
+            <!-- ==================== HOME PAGE 1: PRIMARY GLASS HOME ==================== -->
+            <div class="home-page w-1/3 h-full pt-11 pb-28 px-4 flex flex-col justify-between">
+              <!-- Frosted Glass Weather & Clock Hero Widget -->
+              <div class="glass-card rounded-[26px] p-4 flex items-center justify-between">
+                <div>
+                  <div id="heroClock" class="text-[44px] font-light tracking-tight leading-none text-white">10:24</div>
+                  <div class="text-xs text-white/80 mt-1 font-medium">Sun, 26 Oct · Crimson OS</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-3xl leading-none">⛅</div>
+                  <div class="text-xs font-semibold text-white mt-1">Partly Cloudy</div>
+                  <div class="text-[11px] text-white/75">72°F · New York</div>
+                </div>
+              </div>
+
+              <!-- Universal Search Pill on Home -->
+              <div id="homeSearchPill" class="glass-card rounded-full px-4 py-2.5 flex items-center justify-between cursor-pointer hover:border-rose-400/60 transition">
+                <span class="text-xs text-white/75">Search apps, web & tools...</span>
+                <span class="text-sm text-white/90">🔍</span>
+              </div>
+
+              <!-- 4x3 Frosted Glass App Grid -->
+              <div id="page1Grid" class="grid grid-cols-4 gap-y-3 gap-x-2 my-1"></div>
+
+              <!-- Dual Mini Glass Widgets Row (Now Playing + Quick Status/Volume) -->
+              <div class="grid grid-cols-2 gap-2.5">
+                <div id="miniMusicWidget" class="glass-card rounded-[20px] p-2.5 flex items-center gap-2.5 cursor-pointer">
+                  <div class="w-9 h-9 rounded-xl glass-icon crimson-glow-active flex items-center justify-center text-base">🎵</div>
+                  <div class="overflow-hidden">
+                    <div class="text-[11px] font-semibold text-white truncate">Now Playing</div>
+                    <div class="text-[10px] text-rose-300 truncate">llıılılılıı Crimson</div>
+                  </div>
+                </div>
+                <div id="miniStatusWidget" class="glass-card rounded-[20px] p-2.5 flex items-center justify-around cursor-pointer">
+                  <span class="text-base" title="Calendar">📅</span>
+                  <span class="text-xs font-semibold text-rose-300 px-1.5 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/40">🔊 Vol</span>
+                  <span class="text-base" title="Battery">🔋</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ==================== HOME PAGE 2: WIDGETS & MULTI-SELECT ==================== -->
+            <div class="home-page w-1/3 h-full pt-11 pb-28 px-4 flex flex-col justify-between">
+              <!-- Interactive Glass Music Player with Live Waveform -->
+              <div class="glass-card rounded-[26px] p-4 flex items-center justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="text-xs font-semibold text-white truncate">Now Playing · Crimson Pulse</div>
+                  <!-- Animated Equalizer Bars -->
+                  <div id="waveformContainer" class="h-9 flex items-center gap-[3px] my-2"></div>
+                  <!-- Media Controls -->
+                  <div class="flex items-center gap-4">
+                    <button id="musicPrevBtn" class="text-sm text-white/85 hover:text-white">⏮</button>
+                    <button id="musicPlayToggle" class="w-9 h-9 rounded-full pill-active flex items-center justify-center text-xs text-white font-bold">⏸</button>
+                    <button id="musicNextBtn" class="text-sm text-white/85 hover:text-white">⏭</button>
+                  </div>
+                </div>
+                <!-- Translucent Blurred Album Art Cube -->
+                <div class="w-20 h-20 rounded-2xl glass-icon crimson-glow-active flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0">
+                  <div class="absolute inset-0 bg-gradient-to-br from-rose-500/40 via-transparent to-black/50"></div>
+                  <span class="text-2xl relative z-10">💿</span>
+                  <span class="text-[9px] text-white/80 font-medium relative z-10 mt-0.5">LOSSLESS</span>
+                </div>
+              </div>
+
+              <!-- Live CPU / RAM / Battery Ring Gauges Card -->
+              <div class="glass-card rounded-[24px] px-3 py-2.5 flex items-center justify-around">
+                <div class="flex flex-col items-center">
+                  <div class="relative w-12 h-12 flex items-center justify-center">
+                    <svg class="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="19" stroke="rgba(255,255,255,0.16)" stroke-width="4" fill="none"/>
+                      <circle id="cpuRing" cx="24" cy="24" r="19" stroke="#ff2a3c" stroke-width="4" stroke-dasharray="119.38" stroke-dashoffset="57" stroke-linecap="round" fill="none"/>
+                    </svg>
+                    <span id="cpuText" class="absolute text-[11px] font-bold">52%</span>
+                  </div>
+                  <span class="text-[10px] text-white/80 mt-0.5">CPU</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="relative w-12 h-12 flex items-center justify-center">
+                    <svg class="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="19" stroke="rgba(255,255,255,0.16)" stroke-width="4" fill="none"/>
+                      <circle id="ramRing" cx="24" cy="24" r="19" stroke="#ff2a3c" stroke-width="4" stroke-dasharray="119.38" stroke-dashoffset="83" stroke-linecap="round" fill="none"/>
+                    </svg>
+                    <span id="ramText" class="absolute text-[11px] font-bold">30%</span>
+                  </div>
+                  <span class="text-[10px] text-white/80 mt-0.5">RAM</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <div class="relative w-12 h-12 flex items-center justify-center">
+                    <svg class="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="19" stroke="rgba(255,255,255,0.16)" stroke-width="4" fill="none"/>
+                      <circle id="batRing" cx="24" cy="24" r="19" stroke="#ff2a3c" stroke-width="4" stroke-dasharray="119.38" stroke-dashoffset="28" stroke-linecap="round" fill="none"/>
+                    </svg>
+                    <span id="batText" class="absolute text-[11px] font-bold">76%</span>
+                  </div>
+                  <span class="text-[10px] text-white/80 mt-0.5">Battery</span>
+                </div>
+              </div>
+
+              <!-- Smart Folders & Multi-Select Header -->
+              <div class="flex items-center justify-between px-1">
+                <span class="text-[11px] font-semibold text-white/85">Smart Glass Folders & Apps</span>
+                <button id="page2MultiToggle" class="text-[10px] font-semibold px-2.5 py-1 rounded-full pill-active text-white">
+                  ✓ Multi-Select
+                </button>
+              </div>
+
+              <!-- 4x2 Folders + Apps Grid -->
+              <div id="page2Grid" class="grid grid-cols-4 gap-y-2.5 gap-x-2"></div>
+            </div>
+
+            <!-- ==================== HOME PAGE 3: MOTION STUDIO & GESTURE HUB ==================== -->
+            <div class="home-page w-1/3 h-full pt-11 pb-28 px-4 flex flex-col gap-3">
+              <div class="glass-card rounded-[26px] p-4">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-rose-400">Page 3 · Gesture Hub</div>
+                <div class="text-sm font-bold text-white mt-1">1:1 Continuous Touch & Physics</div>
+                <p class="text-[11px] text-white/80 mt-1 leading-relaxed">
+                  Swipe left/right for pages, pull up from bottom for Universal Search, or drag from the left edge for the Glass Navigation Drawer.
+                </p>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                  <button id="hubOpenNav" class="py-2 px-3 rounded-xl pill-inactive text-[11px] font-semibold text-white">
+                    ☰ Open Nav Drawer
+                  </button>
+                  <button id="hubOpenVol" class="py-2 px-3 rounded-xl pill-active text-[11px] font-semibold text-white">
+                    🔊 Volume Slider
+                  </button>
+                </div>
+              </div>
+
+              <!-- Custom Folders Created in Multi-Select -->
+              <div class="glass-card rounded-[24px] p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-white">Custom Grouped Folders</span>
+                    <span id="folderCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-white/15">4 Folders</span>
+                  </div>
+                  <div id="customFoldersList" class="space-y-2 text-xs"></div>
+                </div>
+                <button id="hubOpenSearch" class="w-full py-2.5 rounded-xl pill-active text-xs font-semibold text-white">
+                  🔍 Launch Universal Search Drawer
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FLOATING MULTI-SELECT OPTIONS BAR (Appears when Multi-Select is active) -->
+          <div id="multiSelectFloatingBar" class="hidden absolute bottom-24 inset-x-4 glass-card-dark crimson-glow-active rounded-[24px] p-3 z-30 transition-all">
+            <div class="flex items-center justify-between mb-2 px-1">
+              <span class="text-xs font-bold text-white">Multi-Select Options</span>
+              <span id="selectedCountLabel" class="text-[11px] font-semibold text-rose-300">3 Selected</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1 text-center">
+              <button id="msGroupBtn" class="p-1.5 rounded-xl hover:bg-white/10 flex flex-col items-center gap-1">
+                <span class="text-base">👥</span>
+                <span class="text-[10px] text-white/90">Group</span>
+              </button>
+              <button id="msUninstallBtn" class="p-1.5 rounded-xl hover:bg-white/10 flex flex-col items-center gap-1">
+                <span class="text-base">🗑️</span>
+                <span class="text-[10px] text-white/90">Uninstall</span>
+              </button>
+              <button id="msRemoveBtn" class="p-1.5 rounded-xl hover:bg-white/10 flex flex-col items-center gap-1">
+                <span class="text-base">✖️</span>
+                <span class="text-[10px] text-white/90">Clear</span>
+              </button>
+              <button id="msFolderBtn" class="p-1.5 rounded-xl hover:bg-white/10 flex flex-col items-center gap-1">
+                <span class="text-base">📁</span>
+                <span class="text-[10px] text-white/90">Create Folder</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- PAGE INDICATOR DOTS & SLEEK FROSTED GLASS BOTTOM DOCK -->
+          <div class="absolute bottom-3 inset-x-4 flex flex-col items-center gap-2 z-20">
+            <!-- Animated Page Pills -->
+            <div id="pageDotsContainer" class="flex items-center gap-1.5">
+              <button data-page="0" class="page-dot h-1.5 w-5 rounded-full pill-active transition-all"></button>
+              <button data-page="1" class="page-dot h-1.5 w-2 rounded-full pill-inactive transition-all"></button>
+              <button data-page="2" class="page-dot h-1.5 w-2 rounded-full pill-inactive transition-all"></button>
+            </div>
+
+            <!-- Frosted Glass Bottom Dock -->
+            <div class="w-full glass-card rounded-[26px] px-3 py-2 flex items-center justify-between">
+              <button data-dock="Phone" class="dock-app w-11 h-11 rounded-2xl glass-icon flex items-center justify-center text-lg">📞</button>
+              <button data-dock="Messages" class="dock-app w-11 h-11 rounded-2xl glass-icon flex items-center justify-center text-lg">💬</button>
+              <button data-dock="Browser" class="dock-app w-11 h-11 rounded-2xl glass-icon flex items-center justify-center text-lg">🌐</button>
+              <button data-dock="Store" class="dock-app w-11 h-11 rounded-2xl glass-icon flex items-center justify-center text-lg">🛍️</button>
+              <button id="dockDrawerBtn" class="w-11 h-11 rounded-2xl glass-icon crimson-glow-active flex items-center justify-center text-lg" title="Open App Drawer">⚙️</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. BACKDROP SCRIM DIMMER -->
+        <div id="scrimLayer" class="absolute inset-0 bg-black/60 opacity-0 pointer-events-none z-30"></div>
+
+        <!-- 4. OPEN APP DRAWER & UNIVERSAL SEARCH SYSTEM (Slides vertically 1:1 with finger) -->
+        <div id="appDrawerSheet" class="absolute inset-0 pt-10 pb-4 px-4 flex flex-col glass-card-dark rounded-t-[34px] z-40 will-change-transform" style="transform: translateY(100%);">
+          <!-- Drag Handle -->
+          <div class="w-11 h-1.5 rounded-full bg-white/30 mx-auto mb-3 cursor-grab"></div>
+
+          <!-- Frosted Glass Universal Search Bar -->
+          <div class="glass-card rounded-full px-4 py-2 flex items-center gap-2.5">
+            <span class="text-rose-400 text-sm">🔍</span>
+            <input id="universalSearchInput" type="text" placeholder="Search apps & web..." class="bg-transparent text-xs text-white placeholder-white/65 focus:outline-none flex-1"/>
+            <button id="voiceSearchBtn" class="text-rose-400 hover:scale-110 transition text-sm" title="Voice Search">🎙️</button>
+          </div>
+
+          <!-- Category Filter Pills -->
+          <div id="drawerCategoryPills" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-3"></div>
+
+          <!-- Recent Apps & Filtered Grid -->
+          <div class="flex-1 overflow-y-auto no-scrollbar space-y-3 pr-0.5">
+            <div>
+              <div class="text-xs font-semibold text-white/90 mb-2">Recent Apps</div>
+              <div id="drawerRecentGrid" class="grid grid-cols-4 gap-2"></div>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white/90 mb-2">Installed Apps</div>
+              <div id="drawerAllGrid" class="grid grid-cols-4 gap-2"></div>
+            </div>
+
+            <!-- Instant Search Overlay Glass Card (Matches Mockup 4) -->
+            <div class="glass-card crimson-glow-active rounded-[24px] p-3.5 space-y-2 mt-2">
+              <div class="w-8 h-1 rounded-full bg-white/25 mx-auto mb-1"></div>
+              <button id="instantWebSearchBtn" class="w-full flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/10 transition text-left">
+                <span class="w-9 h-9 rounded-xl glass-icon flex items-center justify-center text-rose-400">🔍</span>
+                <div>
+                  <div id="instantWebSearchLabel" class="text-xs font-semibold text-white">Search on web</div>
+                  <div class="text-[10px] text-white/65">Instant Crimson Web Lookup</div>
+                </div>
+              </button>
+              <div class="h-px bg-white/15"></div>
+              <button id="instantSettingsBtn" class="w-full flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/10 transition text-left">
+                <span class="w-9 h-9 rounded-xl glass-icon flex items-center justify-center text-white">⚙️</span>
+                <div>
+                  <div class="text-xs font-semibold text-white">Settings</div>
+                  <div class="text-[10px] text-white/65">Launcher & System Preferences</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. LEFT FROSTED GLASS NAVIGATION DRAWER (Slides horizontally 1:1 with finger) -->
+        <div id="navDrawerSheet" class="absolute top-3 bottom-3 left-2.5 w-[276px] glass-card-dark rounded-[30px] p-4 flex flex-col justify-between z-50 will-change-transform" style="transform: translateX(-310px);">
+          <div>
+            <!-- User Profile Header -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-full pill-active flex items-center justify-center text-sm font-bold text-white">AM</div>
+                <div>
+                  <div class="text-sm font-bold text-white">Alex Mercer</div>
+                  <div class="text-[10px] text-rose-300">Crimson Glass OS · v0.3</div>
+                </div>
+              </div>
+              <button id="closeNavBtn" class="w-7 h-7 rounded-full bg-white/10 text-xs text-white/80 hover:text-white">✕</button>
+            </div>
+
+            <!-- Drawer Search Bar -->
+            <button id="navJumpSearchBtn" class="w-full mt-3.5 glass-card rounded-2xl px-3.5 py-2 flex items-center gap-2 text-xs text-white/75 hover:text-white">
+              <span>🔍</span>
+              <span>Search apps...</span>
+            </button>
+
+            <!-- Categories List -->
+            <div class="mt-4">
+              <div class="text-[10px] font-bold tracking-wider uppercase text-white/50 mb-1.5">Categories</div>
+              <div id="navCategoriesList" class="space-y-1"></div>
+            </div>
+          </div>
+
+          <!-- Circular Glass Quick Settings Toggles Grid (Matches Mockup 3) -->
+          <div class="pt-3 border-t border-white/15">
+            <div id="navQuickToggles" class="grid grid-cols-4 gap-y-2.5 gap-x-1 text-center"></div>
+          </div>
+        </div>
+
+        <!-- 6. FLOATING GLASSMORPHIC VERTICAL VOLUME SLIDER OVERLAY (Right Edge) -->
+        <div id="volumeFloatingCard" class="absolute right-3 top-1/2 -translate-y-1/2 w-[54px] glass-card-dark rounded-full py-3.5 px-2 flex flex-col items-center gap-2 z-50 transition-all duration-200 opacity-0 pointer-events-none translate-x-5">
+          <span class="text-sm">🔊</span>
+          <span id="volumePctLabel" class="text-[10px] font-bold text-white">85%</span>
+          <!-- Interactive Vertical Scrub Track -->
+          <div id="volumeTrack" class="relative w-3 h-36 rounded-full bg-white/15 overflow-hidden cursor-ns-resize flex items-end">
+            <div id="volumeFill" class="w-full bg-gradient-to-t from-rose-600 to-rose-400 rounded-full shadow-[0_0_12px_#ff2a3c]" style="height: 85%;"></div>
+          </div>
+          <span class="text-xs text-white/60">🔉</span>
+        </div>
+
+        <!-- IN-SCREEN TOAST BANNER -->
+        <div id="screenToast" class="absolute top-11 inset-x-8 glass-card-dark crimson-glow-active rounded-2xl px-3.5 py-2 text-center text-xs font-medium text-white z-50 opacity-0 pointer-events-none transition-opacity duration-200">
+          Action Completed
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVA CODE & ARCHITECTURE MODAL -->
+  <div id="codeModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="glass-card-dark rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border border-rose-500/40">
+      <div class="px-5 py-4 border-b border-white/15 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-white">Upgraded Android Project (`MainActivity.java` v0.3)</h2>
+          <p class="text-[11px] text-rose-300">Continuous 1:1 Touch-Tracking + Spring Physics + Frosted Glassmorphism</p>
+        </div>
+        <button id="closeCodeModalBtn" class="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white">Close ✕</button>
+      </div>
+      <div class="p-5 overflow-y-auto text-xs text-slate-200 space-y-3 leading-relaxed">
+        <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
+          <div class="font-bold text-rose-300 mb-1">1. Why v0.2 Felt Abrupt vs. How v0.3 Smooth Motion Works</div>
+          <p>In your uploaded v0.2 project, <code>dispatchTouchEvent</code> waited until <code>dy &lt; -dp(64)</code> and then called <code>setContentView()</code> or opened a static <code>Dialog</code>. In v0.3, all layers (3-page <code>homeStrip</code>, <code>appDrawerLayer</code>, <code>navDrawerLayer</code>, and <code>volumeOverlayCard</code>) stay alive inside a single hardware-accelerated <code>FrameLayout</code>.</p>
+        </div>
+        <div class="p-3 rounded-2xl bg-white/5 border border-white/10">
+          <div class="font-bold text-rose-300 mb-1">2. Real-Time Finger Tracking & Velocity Fling</div>
+          <p>As your finger moves in <code>ACTION_MOVE</code>, <code>homeOffsetPx</code>, <code>appDrawerProgress</code>, and <code>navDrawerProgress</code> update continuously every frame, driving <code>setTranslationX()</code>, <code>setTranslationY()</code>, <code>setScaleX/Y()</code>, and Android 12+ <code>RenderEffect.createBlurEffect()</code>. On <code>ACTION_UP</code>, <code>VelocityTracker</code> computes swipe velocity in px/sec to settle smoothly.</p>
+        </div>
+        <pre class="p-3 rounded-2xl bg-black/60 border border-white/10 overflow-x-auto text-[11px] font-mono text-emerald-300"><code>// Continuous 1:1 Touch Transform in MainActivity.java (v0.3)
+homeStrip.setTranslationX(-homeOffsetPx);
+float overlay = Math.max(appDrawerProgress, navDrawerProgress);
+homeStage.setScaleX(1f - overlay * 0.08f);
+homeStage.setScaleY(1f - overlay * 0.08f);
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && overlay > 0.02f) {
+    float r = Math.max(1f, overlay * 26f);
+    homeStage.setRenderEffect(RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP));
+}
+appDrawerLayer.setTranslationY((1f - appDrawerProgress) * screenH);
+navDrawerLayer.setTranslationX((navDrawerProgress - 1f) * (drawerW + dp(20)));</code></pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function() {
+  // App Catalog
+  const APPS = [
+    { id: 'cam', name: 'Camera', icon: '📷', cat: 'Media', pinned: true },
+    { id: 'msg', name: 'Messages', icon: '💬', cat: 'Social', pinned: true },
+    { id: 'chr', name: 'Chrome', icon: '🌐', cat: 'Utility', pinned: true },
+    { id: 'ply', name: 'Play Video', icon: '▶️', cat: 'Media', pinned: true },
+    { id: 'fil', name: 'Files', icon: '📁', cat: 'Work', pinned: true },
+    { id: 'str', name: 'Play Store', icon: '🛍️', cat: 'Utility', pinned: true },
+    { id: 'red', name: 'Reddit', icon: '👽', cat: 'Social', pinned: true },
+    { id: 'set', name: 'Settings', icon: '⚙️', cat: 'Utility', pinned: true },
+    { id: 'phn', name: 'Phone', icon: '📞', cat: 'Utility', pinned: true },
+    { id: 'gal', name: 'Gallery', icon: '🖼️', cat: 'Media', pinned: true },
+    { id: 'mal', name: 'Crimson Mail', icon: '✉️', cat: 'Work', pinned: true },
+    { id: 'mus', name: 'Music', icon: '🎵', cat: 'Media', pinned: true },
+    { id: 'gam', name: 'Cyber Blade', icon: '⚔️', cat: 'Games', pinned: false },
+    { id: 'soc', name: 'Pulse Chat', icon: '💚', cat: 'Social', pinned: false },
+    { id: 'not', name: 'Glass Notes', icon: '📝', cat: 'Work', pinned: false },
+    { id: 'map', name: 'Maps', icon: '🗺️', cat: 'Utility', pinned: false }
+  ];
+
+  const FOLDERS = [
+    { id: 'folder:Social', name: 'Social', icons: ['💬', '👽', '💚', '✉️'] },
+    { id: 'folder:Media', name: 'Media', icons: ['📷', '▶️', '🎵', '🖼️'] },
+    { id: 'folder:Gaming', name: 'Gaming', icons: ['⚔️', '🎮', '🏆', '🔥'] },
+    { id: 'folder:Work', name: 'Work', icons: ['📁', '📝', '✉️', '📅'] }
+  ];
+
+  const NAV_CATEGORIES = [
+    { icon: '👥', label: 'Social', cat: 'Social' },
+    { icon: '🎮', label: 'Gaming', cat: 'Games' },
+    { icon: '✅', label: 'Productivity', cat: 'Work' },
+    { icon: '🧰', label: 'Tools', cat: 'Utility' },
+    { icon: '⚙️', label: 'Others', cat: 'All' }
+  ];
+
+  const QUICK_TOGGLES = [
+    { id: 'wifi', icon: '📶', label: 'Wi-Fi', active: true },
+    { id: 'bt', icon: '🦷', label: 'Bluetooth', active: true },
+    { id: 'vol', icon: '🔔', label: 'Volume', active: true },
+    { id: 'srch', icon: '🔍', label: 'Search', active: false },
+    { id: 'dnd', icon: '🌙', label: 'DND', active: false },
+    { id: 'dark', icon: '✨', label: 'Dark Glass', active: true },
+    { id: 'torch', icon: '🔦', label: 'Flashlight', active: false },
+    { id: 'more', icon: '⋯', label: 'More', active: false }
+  ];
+
+  // Continuous Physics & State Variables
+  const SCREEN_W = 336;
+  const SCREEN_H = 716;
+  const DRAWER_W = 290;
+
+  let homeX = 0;            // [0 .. 2 * SCREEN_W]
+  let targetHomeX = 0;
+  let homeVelX = 0;
+
+  let appDrawerY = 0;       // [0 .. 1] (0 = closed, 1 = open)
+  let targetAppDrawerY = 0;
+  let appDrawerVel = 0;
+
+  let navDrawerX = 0;       // [0 .. 1] (0 = closed, 1 = open)
+  let targetNavDrawerX = 0;
+  let navDrawerVel = 0;
+
+  let isDragging = false;
+  let gestureMode = 'NONE'; // 'HOME_PAGER' | 'APP_DRAWER' | 'NAV_DRAWER'
+  let startPointerX = 0, startPointerY = 0;
+  let lastPointerX = 0, lastPointerY = 0, lastMoveTime = 0;
+  let pointerVelX = 0, pointerVelY = 0;
+  let dragStartHomeX = 0, dragStartAppY = 0, dragStartNavX = 0;
+
+  let multiSelectMode = false;
+  const selectedIds = new Set(['folder:Social', ' gam', 'msg', 'str']);
+  let activeCategory = 'All';
+  let isMusicPlaying = true;
+  let volumeLevel = 0.85;
+  let volumeHideTimer = null;
+
+  // DOM Elements
+  const screenViewport = document.getElementById('screenViewport');
+  const wallpaperLayer = document.getElementById('wallpaperLayer');
+  const homeStage = document.getElementById('homeStage');
+  const homeStrip = document.getElementById('homeStrip');
+  const scrimLayer = document.getElementById('scrimLayer');
+  const appDrawerSheet = document.getElementById('appDrawerSheet');
+  const navDrawerSheet = document.getElementById('navDrawerSheet');
+  const volumeFloatingCard = document.getElementById('volumeFloatingCard');
+  const volumeFill = document.getElementById('volumeFill');
+  const volumePctLabel = document.getElementById('volumePctLabel');
+  const multiSelectFloatingBar = document.getElementById('multiSelectFloatingBar');
+  const selectedCountLabel = document.getElementById('selectedCountLabel');
+  const screenToast = document.getElementById('screenToast');
+
+  const telemetryGesture = document.getElementById('telemetryGesture');
+  const telemetryHomeX = document.getElementById('telemetryHomeX');
+  const telemetryDrawerY = document.getElementById('telemetryDrawerY');
+  const telemetryNavX = document.getElementById('telemetryNavX');
+
+  function showToast(msg) {
+    screenToast.textContent = msg;
+    screenToast.style.opacity = '1';
+    clearTimeout(screenToast._t);
+    screenToast._t = setTimeout(() => { screenToast.style.opacity = '0'; }, 1800);
+  }
+
+  // Render Home Page 1 App Grid
+  function renderPage1Grid() {
+    const container = document.getElementById('page1Grid');
+    container.innerHTML = '';
+    APPS.slice(0, 12).forEach(app => {
+      container.appendChild(createAppTile(app, true));
+    });
+  }
+
+  // Render Home Page 2 Folders & Multi-Select Grid
+  function renderPage2Grid() {
+    const container = document.getElementById('page2Grid');
+    container.innerHTML = '';
+    FOLDERS.forEach(folder => {
+      const isSel = multiSelectMode && selectedIds.has(folder.id);
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-col items-center cursor-pointer ' + (multiSelectMode ? 'multi-jiggle' : '');
+      wrap.innerHTML = `
+        <div class="relative w-14 h-14 rounded-[18px] glass-icon ${isSel ? 'crimson-glow-active' : ''} p-2 grid grid-cols-2 gap-1 place-items-center">
+          ${folder.icons.map(ic => `<span class="text-xs leading-none">${ic}</span>`).join('')}
+          ${multiSelectMode ? `<span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full ${isSel ? 'pill-active' : 'bg-black/70 border border-white/30'} flex items-center justify-center text-[10px] font-bold">${isSel ? '✓' : ''}</span>` : ''}
+        </div>
+        <span class="text-[10px] text-white/85 mt-1 truncate max-w-full">${folder.name}</span>
+      `;
+      wrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (multiSelectMode) {
+          if (selectedIds.has(folder.id)) selectedIds.delete(folder.id);
+          else selectedIds.add(folder.id);
+          updateMultiSelectUI();
+        } else {
+          activeCategory = folder.name === 'Gaming' ? 'Games' : folder.name;
+          renderDrawerCategories();
+          renderDrawerApps();
+          targetAppDrawerY = 1;
+        }
+      });
+      container.appendChild(wrap);
+    });
+
+    APPS.slice(4, 8).forEach(app => {
+      container.appendChild(createAppTile(app, true));
+    });
+  }
+
+  function createAppTile(app, allowMulti) {
+    const isSel = allowMulti && multiSelectMode && selectedIds.has(app.id);
+    const el = document.createElement('div');
+    el.className = 'flex flex-col items-center cursor-pointer ' + (allowMulti && multiSelectMode ? 'multi-jiggle' : '');
+    el.innerHTML = `
+      <div class="relative w-14 h-14 rounded-[18px] glass-icon ${isSel ? 'crimson-glow-active' : ''} flex items-center justify-center text-2xl">
+        <span>${app.icon}</span>
+        ${allowMulti && multiSelectMode ? `<span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full ${isSel ? 'pill-active' : 'bg-black/70 border border-white/30'} flex items-center justify-center text-[10px] font-bold">${isSel ? '✓' : ''}</span>` : ''}
+      </div>
+      <span class="text-[10px] text-white/85 mt-1 truncate max-w-[64px]">${app.name}</span>
+    `;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (allowMulti && multiSelectMode) {
+        if (selectedIds.has(app.id)) selectedIds.delete(app.id);
+        else selectedIds.add(app.id);
+        updateMultiSelectUI();
+      } else {
+        showToast('Launching ' + app.name + '...');
+      }
+    });
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      selectedIds.add(app.id);
+      multiSelectMode = true;
+      updateMultiSelectUI();
+    });
+    return el;
+  }
+
+  function renderPage3FoldersList() {
+    const list = document.getElementById('customFoldersList');
+    const badge = document.getElementById('folderCountBadge');
+    badge.textContent = FOLDERS.length + ' Folders';
+    list.innerHTML = FOLDERS.map(f => `
+      <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+        <div class="flex items-center gap-2">
+          <span>${f.icons.slice(0,2).join('')}</span>
+          <span class="font-medium text-white">${f.name}</span>
+        </div>
+        <span class="text-[10px] text-rose-300">${f.icons.length} apps</span>
+      </div>
+    `).join('');
+  }
+
+  function updateMultiSelectUI() {
+    multiSelectFloatingBar.classList.toggle('hidden', !multiSelectMode);
+    selectedCountLabel.textContent = selectedIds.size + ' Selected';
+    document.getElementById('btnMultiSelect').className =
+      'text-xs font-medium py-2.5 px-3 rounded-xl text-white transition ' + (multiSelectMode ? 'pill-active' : 'pill-inactive');
+    renderPage1Grid();
+    renderPage2Grid();
+  }
+
+  // Render Waveform Bars
+  const waveformContainer = document.getElementById('waveformContainer');
+  const waveBars = [];
+  for (let i = 0; i < 24; i++) {
+    const b = document.createElement('div');
+    b.className = 'flex-1 rounded-full bg-gradient-to-t from-rose-600 to-rose-400 transition-all duration-75';
+    b.style.height = (25 + Math.abs(Math.sin(i * 0.5)) * 65) + '%';
+    waveformContainer.appendChild(b);
+    waveBars.push(b);
+  }
+  let wavePhase = 0;
+  setInterval(() => {
+    if (!isMusicPlaying) return;
+    wavePhase += 0.35;
+    waveBars.forEach((b, i) => {
+      const h = 18 + Math.abs(Math.sin(wavePhase + i * 0.45) * Math.cos(wavePhase * 0.5 - i * 0.2)) * 80;
+      b.style.height = h.toFixed(1) + '%';
+    });
+  }, 80);
+
+  // Render App Drawer Categories & Apps
+  function renderDrawerCategories() {
+    const row = document.getElementById('drawerCategoryPills');
+    const cats = ['All', 'Games', 'Social', 'Utility', 'Work', 'Media'];
+    row.innerHTML = '';
+    cats.forEach(c => {
+      const btn = document.createElement('button');
+      const active = activeCategory === c;
+      btn.className = `px-3.5 py-1 rounded-full text-xs font-medium transition flex-shrink-0 ${active ? 'pill-active text-white' : 'pill-inactive text-white/80'}`;
+      btn.textContent = c;
+      btn.addEventListener('click', () => {
+        activeCategory = c;
+        renderDrawerCategories();
+        renderDrawerApps();
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  function renderDrawerApps() {
+    const q = (document.getElementById('universalSearchInput').value || '').trim().toLowerCase();
+    const recentGrid = document.getElementById('drawerRecentGrid');
+    const allGrid = document.getElementById('drawerAllGrid');
+    const webLabel = document.getElementById('instantWebSearchLabel');
+
+    webLabel.textContent = q ? `Search web for "${q}"` : 'Search on web';
+    recentGrid.innerHTML = '';
+    APPS.slice(0, 4).forEach(a => recentGrid.appendChild(createAppTile(a, false)));
+
+    allGrid.innerHTML = '';
+    APPS.filter(a => {
+      const matchQ = !q || a.name.toLowerCase().includes(q);
+      const matchC = activeCategory === 'All' || a.cat.toLowerCase() === activeCategory.toLowerCase();
+      return matchQ && matchC;
+    }).forEach(a => allGrid.appendChild(createAppTile(a, false)));
+  }
+
+  // Render Left Navigation Drawer
+  function renderNavDrawer() {
+    const catList = document.getElementById('navCategoriesList');
+    catList.innerHTML = '';
+    NAV_CATEGORIES.forEach(nc => {
+      const btn = document.createElement('button');
+      btn.className = 'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-white/10 text-left transition';
+      btn.innerHTML = `<span class="text-base">${nc.icon}</span><span class="text-xs font-medium text-white">${nc.label}</span>`;
+      btn.addEventListener('click', () => {
+        activeCategory = nc.cat;
+        renderDrawerCategories();
+        renderDrawerApps();
+        targetNavDrawerX = 0;
+        targetAppDrawerY = 1;
+      });
+      catList.appendChild(btn);
+    });
+
+    const qsGrid = document.getElementById('navQuickToggles');
+    qsGrid.innerHTML = '';
+    QUICK_TOGGLES.forEach(t => {
+      const wrap = document.createElement('button');
+      wrap.className = 'flex flex-col items-center gap-1 group';
+      wrap.innerHTML = `
+        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm transition ${t.active ? 'pill-active text-white' : 'pill-inactive text-white/80'}">${t.icon}</div>
+        <span class="text-[9px] text-white/75 truncate max-w-[54px]">${t.label}</span>
+      `;
+      wrap.addEventListener('click', () => {
+        if (t.id === 'vol') {
+          showVolumeOverlay();
+        } else if (t.id === 'srch') {
+          targetNavDrawerX = 0;
+          targetAppDrawerY = 1;
+        } else {
+          t.active = !t.active;
+          renderNavDrawer();
+          showToast(t.label + (t.active ? ' Enabled' : ' Disabled'));
+        }
+      });
+      qsGrid.appendChild(wrap);
+    });
+  }
+
+  // Volume Slider Overlay Logic
+  function showVolumeOverlay() {
+    volumeFloatingCard.style.opacity = '1';
+    volumeFloatingCard.style.transform = 'translateY(-50%) translateX(0)';
+    volumeFloatingCard.style.pointerEvents = 'auto';
+    clearTimeout(volumeHideTimer);
+    volumeHideTimer = setTimeout(() => {
+      volumeFloatingCard.style.opacity = '0';
+      volumeFloatingCard.style.transform = 'translateY(-50%) translateX(20px)';
+      volumeFloatingCard.style.pointerEvents = 'none';
+    }, 3200);
+  }
+
+  function updateVolumeFromEvent(clientY) {
+    const rect = document.getElementById('volumeTrack').getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+    volumeLevel = ratio;
+    const pct = Math.round(ratio * 100);
+    volumeFill.style.height = pct + '%';
+    volumePctLabel.textContent = pct + '%';
+    showVolumeOverlay();
+  }
+
+  const volumeTrack = document.getElementById('volumeTrack');
+  let scrubbingVolume = false;
+  volumeTrack.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    scrubbingVolume = true;
+    updateVolumeFromEvent(e.clientY);
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (scrubbingVolume) updateVolumeFromEvent(e.clientY);
+  });
+  window.addEventListener('pointerup', () => { scrubbingVolume = false; });
+
+  // =========================================================================
+  // 1:1 CONTINUOUS TOUCH & MOUSE GESTURE ENGINE + SPRING PHYSICS LOOP
+  // =========================================================================
+  screenViewport.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#volumeFloatingCard') || e.target.closest('input')) return;
+    isDragging = true;
+    gestureMode = 'NONE';
+    const rect = screenViewport.getBoundingClientRect();
+    startPointerX = lastPointerX = e.clientX - rect.left;
+    startPointerY = lastPointerY = e.clientY - rect.top;
+    lastMoveTime = performance.now();
+    pointerVelX = 0;
+    pointerVelY = 0;
+
+    dragStartHomeX = homeX;
+    dragStartAppY = appDrawerY;
+    dragStartNavX = navDrawerX;
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const rect = screenViewport.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const dx = x - startPointerX;
+    const dy = y - startPointerY;
+    const now = performance.now();
+    const dt = Math.max(1, now - lastMoveTime);
+
+    pointerVelX = ((x - lastPointerX) / dt) * 1000;
+    pointerVelY = ((y - lastPointerY) / dt) * 1000;
+    lastPointerX = x;
+    lastPointerY = y;
+    lastMoveTime = now;
+
+    if (gestureMode === 'NONE' && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      if (navDrawerX > 0.1) {
+        if (Math.abs(dx) > Math.abs(dy)) gestureMode = 'NAV_DRAWER';
+      } else if (appDrawerY > 0.1) {
+        if (dy > 8 && Math.abs(dy) > Math.abs(dx)) gestureMode = 'APP_DRAWER';
+      } else {
+        if (startPointerX < 38 && dx > 8 && Math.abs(dx) > Math.abs(dy)) {
+          gestureMode = 'NAV_DRAWER';
+        } else if (Math.abs(dx) > Math.abs(dy) * 1.1) {
+          gestureMode = 'HOME_PAGER';
+        } else if (dy < -8 && Math.abs(dy) > Math.abs(dx) * 1.1) {
+          gestureMode = 'APP_DRAWER';
+        }
+      }
+      telemetryGesture.textContent = gestureMode;
+    }
+
+    if (gestureMode === 'HOME_PAGER') {
+      let raw = dragStartHomeX - dx;
+      const maxOff = SCREEN_W * 2;
+      if (raw < 0) raw = raw * 0.28;
+      if (raw > maxOff) raw = maxOff + (raw - maxOff) * 0.28;
+      homeX = targetHomeX = raw;
+    } else if (gestureMode === 'APP_DRAWER') {
+      const delta = -dy / (SCREEN_H * 0.68);
+      appDrawerY = targetAppDrawerY = Math.max(0, Math.min(1, dragStartAppY + delta));
+    } else if (gestureMode === 'NAV_DRAWER') {
+      const delta = dx / DRAWER_W;
+      navDrawerX = targetNavDrawerX = Math.max(0, Math.min(1, dragStartNavX + delta));
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    if (gestureMode === 'HOME_PAGER') {
+      const pageFloat = homeX / SCREEN_W;
+      let destPage = Math.round(pageFloat);
+      if (Math.abs(pointerVelX) > 260) {
+        destPage = pointerVelX < 0 ? Math.floor(pageFloat + 0.85) : Math.ceil(pageFloat - 0.85);
+      }
+      destPage = Math.max(0, Math.min(2, destPage));
+      targetHomeX = destPage * SCREEN_W;
+    } else if (gestureMode === 'APP_DRAWER') {
+      const open = pointerVelY < -280 || (Math.abs(pointerVelY) <= 280 && appDrawerY > 0.32);
+      targetAppDrawerY = open ? 1 : 0;
+    } else if (gestureMode === 'NAV_DRAWER') {
+      const open = pointerVelX > 240 || (Math.abs(pointerVelX) <= 240 && navDrawerX > 0.32);
+      targetNavDrawerX = open ? 1 : 0;
+    }
+    gestureMode = 'NONE';
+    telemetryGesture.textContent = 'SPRING_SETTLE';
+  });
+
+  // High-Precision Damped Harmonic Spring Solver Loop
+  function stepSpringLoop() {
+    if (!isDragging || gestureMode !== 'HOME_PAGER') {
+      const forceX = (targetHomeX - homeX) * 0.18;
+      homeVelX = (homeVelX + forceX) * 0.74;
+      homeX += homeVelX;
+      if (Math.abs(targetHomeX - homeX) < 0.2 && Math.abs(homeVelX) < 0.2) {
+        homeX = targetHomeX;
+        homeVelX = 0;
+      }
+    }
+
+    if (!isDragging || gestureMode !== 'APP_DRAWER') {
+      const forceY = (targetAppDrawerY - appDrawerY) * 0.20;
+      appDrawerVel = (appDrawerVel + forceY) * 0.72;
+      appDrawerY += appDrawerVel;
+      if (Math.abs(targetAppDrawerY - appDrawerY) < 0.002 && Math.abs(appDrawerVel) < 0.002) {
+        appDrawerY = targetAppDrawerY;
+        appDrawerVel = 0;
+      }
+    }
+
+    if (!isDragging || gestureMode !== 'NAV_DRAWER') {
+      const forceN = (targetNavDrawerX - navDrawerX) * 0.20;
+      navDrawerVel = (navDrawerVel + forceN) * 0.72;
+      navDrawerX += navDrawerVel;
+      if (Math.abs(targetNavDrawerX - navDrawerX) < 0.002 && Math.abs(navDrawerVel) < 0.002) {
+        navDrawerX = targetNavDrawerX;
+        navDrawerVel = 0;
+      }
+    }
+
+    applyVisualTransforms();
+    requestAnimationFrame(stepSpringLoop);
+  }
+
+  function applyVisualTransforms() {
+    // 1. Horizontal Home Strip Transform & Page Scale
+    homeStrip.style.transform = `translate3d(${-homeX}px, 0, 0)`;
+    const pageFloat = homeX / SCREEN_W;
+    const nearestPage = Math.max(0, Math.min(2, Math.round(pageFloat)));
+
+    // Page Indicator Dots
+    document.querySelectorAll('.page-dot').forEach((dot, idx) => {
+      const prox = Math.max(0, 1 - Math.abs(pageFloat - idx));
+      dot.style.width = (8 + 14 * prox) + 'px';
+      dot.className = 'page-dot h-1.5 rounded-full transition-colors ' + (idx === nearestPage ? 'pill-active' : 'pill-inactive');
+    });
+
+    // Left Control Buttons Highlight
+    document.getElementById('btnPage1').className =
+      'text-xs font-medium py-2.5 px-3 rounded-xl text-white transition ' + (nearestPage === 0 && appDrawerY < 0.2 && navDrawerX < 0.2 ? 'pill-active' : 'pill-inactive');
+    document.getElementById('btnPage2').className =
+      'text-xs font-medium py-2.5 px-3 rounded-xl text-white transition ' + (nearestPage === 1 && appDrawerY < 0.2 && navDrawerX < 0.2 ? 'pill-active' : 'pill-inactive');
+
+    // 2. Overlay Depth, Blur & Parallax on Home Stage
+    const overlay = Math.max(appDrawerY, navDrawerX);
+    const scale = 1 - overlay * 0.08;
+    const blurPx = overlay * 14;
+    homeStage.style.transform = `translate3d(${navDrawerX * 28}px, 0, 0) scale(${scale})`;
+    homeStage.style.filter = overlay > 0.02 ? `blur(${blurPx.toFixed(1)}px)` : 'none';
+    homeStage.style.opacity = (1 - overlay * 0.38).toFixed(2);
+
+    // 3. Wallpaper Parallax
+    const wpX = -pageFloat * 18 + navDrawerX * 14;
+    const wpY = -appDrawerY * 18;
+    wallpaperLayer.style.transform = `translate3d(${wpX}px, ${wpY}px, 0)`;
+
+    // 4. Scrim Layer
+    scrimLayer.style.opacity = (overlay * 0.85).toFixed(2);
+    scrimLayer.style.pointerEvents = overlay > 0.15 ? 'auto' : 'none';
+
+    // 5. App Drawer Vertical Sheet
+    const drawerTranslateY = (1 - appDrawerY) * 100;
+    appDrawerSheet.style.transform = `translate3d(0, ${drawerTranslateY}%, 0)`;
+    appDrawerSheet.style.pointerEvents = appDrawerY > 0.1 ? 'auto' : 'none';
+
+    // 6. Left Navigation Drawer Horizontal Sheet
+    const navTranslateX = (navDrawerX - 1) * 310;
+    navDrawerSheet.style.transform = `translate3d(${navTranslateX}px, 0, 0)`;
+    navDrawerSheet.style.pointerEvents = navDrawerX > 0.1 ? 'auto' : 'none';
+
+    // 7. Telemetry Update
+    telemetryHomeX.textContent = `${homeX.toFixed(0)} px (Page ${nearestPage + 1}/3)`;
+    telemetryDrawerY.textContent = `${Math.round(appDrawerY * 100)}%`;
+    telemetryNavX.textContent = `${Math.round(navDrawerX * 100)}%`;
+  }
+
+  // Wire Interactive Controls & Buttons
+  scrimLayer.addEventListener('click', () => {
+    targetAppDrawerY = 0;
+    targetNavDrawerX = 0;
+  });
+
+  document.querySelectorAll('.page-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      targetHomeX = Number(dot.dataset.page) * SCREEN_W;
+    });
+  });
+
+  document.getElementById('btnPage1').addEventListener('click', () => {
+    targetAppDrawerY = 0; targetNavDrawerX = 0; targetHomeX = 0;
+  });
+  document.getElementById('btnPage2').addEventListener('click', () => {
+    targetAppDrawerY = 0; targetNavDrawerX = 0; targetHomeX = SCREEN_W;
+  });
+  document.getElementById('btnMultiSelect').addEventListener('click', () => {
+    targetAppDrawerY = 0; targetNavDrawerX = 0; targetHomeX = SCREEN_W;
+    multiSelectMode = !multiSelectMode;
+    updateMultiSelectUI();
+  });
+  document.getElementById('btnNavDrawer').addEventListener('click', () => {
+    targetAppDrawerY = 0;
+    targetNavDrawerX = targetNavDrawerX > 0.5 ? 0 : 1;
+  });
+  document.getElementById('btnVolume').addEventListener('click', () => {
+    showVolumeOverlay();
+  });
+  document.getElementById('btnAppDrawer').addEventListener('click', () => {
+    targetNavDrawerX = 0;
+    targetAppDrawerY = targetAppDrawerY > 0.5 ? 0 : 1;
+  });
+
+  document.getElementById('homeSearchPill').addEventListener('click', () => {
+    targetAppDrawerY = 1;
+    setTimeout(() => document.getElementById('universalSearchInput').focus(), 250);
+  });
+  document.getElementById('miniMusicWidget').addEventListener('click', () => {
+    targetHomeX = SCREEN_W;
+  });
+  document.getElementById('miniStatusWidget').addEventListener('click', () => {
+    showVolumeOverlay();
+  });
+  document.getElementById('page2MultiToggle').addEventListener('click', () => {
+    multiSelectMode = !multiSelectMode;
+    updateMultiSelectUI();
+  });
+  document.getElementById('hubOpenNav').addEventListener('click', () => { targetNavDrawerX = 1; });
+  document.getElementById('hubOpenVol').addEventListener('click', () => { showVolumeOverlay(); });
+  document.getElementById('hubOpenSearch').addEventListener('click', () => { targetAppDrawerY = 1; });
+  document.getElementById('dockDrawerBtn').addEventListener('click', () => {
+    targetAppDrawerY = targetAppDrawerY > 0.5 ? 0 : 1;
+  });
+  document.querySelectorAll('.dock-app').forEach(btn => {
+    btn.addEventListener('click', () => showToast('Opening ' + btn.dataset.dock + '...'));
+  });
+
+  // Music Controls
+  document.getElementById('musicPlayToggle').addEventListener('click', (e) => {
+    isMusicPlaying = !isMusicPlaying;
+    e.currentTarget.textContent = isMusicPlaying ? '⏸' : '▶';
+  });
+  document.getElementById('musicPrevBtn').addEventListener('click', () => showToast('Previous Track'));
+  document.getElementById('musicNextBtn').addEventListener('click', () => showToast('Next Track'));
+
+  // Multi-Select Floating Bar Actions
+  document.getElementById('msGroupBtn').addEventListener('click', () => {
+    showToast(`Grouped ${selectedIds.size} items into Smart Folder`);
+    multiSelectMode = false;
+    updateMultiSelectUI();
+  });
+  document.getElementById('msFolderBtn').addEventListener('click', () => {
+    FOLDERS.push({
+      id: 'folder:Custom' + (FOLDERS.length + 1),
+      name: 'Crimson ' + (FOLDERS.length + 1),
+      icons: ['🔥', '⚡', '🎵', '🚀']
+    });
+    renderPage3FoldersList();
+    showToast('New Glass Folder Created!');
+    multiSelectMode = false;
+    updateMultiSelectUI();
+  });
+  document.getElementById('msUninstallBtn').addEventListener('click', () => {
+    showToast('Opened App Uninstall Manager');
+    multiSelectMode = false;
+    updateMultiSelectUI();
+  });
+  document.getElementById('msRemoveBtn').addEventListener('click', () => {
+    selectedIds.clear();
+    multiSelectMode = false;
+    updateMultiSelectUI();
+  });
+
+  // Search Input & Drawer Buttons
+  document.getElementById('universalSearchInput').addEventListener('input', renderDrawerApps);
+  document.getElementById('voiceSearchBtn').addEventListener('click', () => showToast('Listening for Voice Search... 🎙️'));
+  document.getElementById('instantWebSearchBtn').addEventListener('click', () => {
+    const q = document.getElementById('universalSearchInput').value || 'Crimson Glass Launcher';
+    showToast('Searching Web for "' + q + '"');
+  });
+  document.getElementById('instantSettingsBtn').addEventListener('click', () => {
+    showToast('Opening Crimson Launcher Settings...');
+  });
+  document.getElementById('closeNavBtn').addEventListener('click', () => { targetNavDrawerX = 0; });
+  document.getElementById('navJumpSearchBtn').addEventListener('click', () => {
+    targetNavDrawerX = 0;
+    targetAppDrawerY = 1;
+  });
+
+  // Code Modal
+  const codeModal = document.getElementById('codeModal');
+  document.getElementById('btnViewCode').addEventListener('click', () => {
+    codeModal.classList.remove('hidden');
+    codeModal.classList.add('flex');
+  });
+  document.getElementById('closeCodeModalBtn').addEventListener('click', () => {
+    codeModal.classList.add('hidden');
+    codeModal.classList.remove('flex');
+  });
+
+  // Initialize All Views & Start 120Hz Physics Loop
+  renderPage1Grid();
+  renderPage2Grid();
+  renderPage3FoldersList();
+  renderDrawerCategories();
+  renderDrawerApps();
+  renderNavDrawer();
+  requestAnimationFrame(stepSpringLoop);
+})();
+</script>
+</body>
+</html>
